@@ -1,0 +1,19 @@
+services:
+  karaoke-mugen:
+    image: karaoke-mugen-or-desktop-wrapper
+    volumes:
+      - ./karaoke-data:/data
+      - ./media:/media
+    ports:
+      - "1337:1337"
+
+  karaoke-prep:
+    build: .
+    volumes:
+      - ./incoming:/incoming
+      - ./media:/media
+      - ./cache:/cache
+    environment:
+      - LYRICS_PROVIDER=lrclib
+      - STEM_ENGINE=demucs
+      - GPU=false

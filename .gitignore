@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+venv/
+.venv/
+cache/
+incoming/
+media/
+karaoke-data/
+*.egg-info/
+dist/
+build/
