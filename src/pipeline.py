@@ -1,6 +1,7 @@
 """Main processing pipeline: metadata → lyrics → stems → video."""
 
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -10,6 +11,8 @@ from metadata import extract_metadata
 MEDIA_DIR = Path(os.environ.get("MEDIA_DIR", "/media"))
 CACHE_DIR = Path(os.environ.get("CACHE_DIR", "/cache"))
 STEM_ENGINE = os.environ.get("STEM_ENGINE", "demucs")
+
+LRC_PATTERN = re.compile(r"\[(\d+):(\d+\.\d+)\](.*)")
 
 
 def process_song(mp3_path: Path) -> Path:
@@ -93,13 +96,10 @@ def lrc_to_ass(lrc_path: Path, ass_path: Path):
     lines = lrc_path.read_text(encoding="utf-8").strip().splitlines()
     events = []
 
-    import re
-    pattern = re.compile(r"\[(\d+):(\d+\.\d+)\](.*)")
-
     timestamps = []
     texts = []
     for line in lines:
-        m = pattern.match(line)
+        m = LRC_PATTERN.match(line)
         if m:
             minutes, seconds, text = m.groups()
             time_s = int(minutes) * 60 + float(seconds)
