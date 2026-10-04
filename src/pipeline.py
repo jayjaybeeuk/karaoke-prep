@@ -1,6 +1,7 @@
 """Main processing pipeline: metadata → lyrics → stems → video."""
 
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -93,7 +94,6 @@ def lrc_to_ass(lrc_path: Path, ass_path: Path):
     lines = lrc_path.read_text(encoding="utf-8").strip().splitlines()
     events = []
 
-    import re
     pattern = re.compile(r"\[(\d+):(\d+\.\d+)\](.*)")
 
     timestamps = []
