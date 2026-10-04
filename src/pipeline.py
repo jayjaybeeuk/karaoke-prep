@@ -27,13 +27,16 @@ def process_song(mp3_path: Path) -> Path:
 
     # 2. Fetch lyrics
     lrc_path = song_cache / "lyrics.lrc"
-    lyrics = fetch_lyrics(artist, title)
-    if lyrics:
-        lrc_path.write_text(lyrics, encoding="utf-8")
-        print(f"[pipeline] Lyrics saved: {lrc_path}")
+    if lrc_path.exists():
+        print(f"[pipeline] Using cached lyrics: {lrc_path}")
     else:
-        print(f"[pipeline] No synced lyrics found for {safe_name}")
-        lrc_path.write_text("", encoding="utf-8")
+        lyrics = fetch_lyrics(artist, title)
+        if lyrics:
+            lrc_path.write_text(lyrics, encoding="utf-8")
+            print(f"[pipeline] Lyrics saved: {lrc_path}")
+        else:
+            print(f"[pipeline] No synced lyrics found for {safe_name}")
+            lrc_path.write_text("", encoding="utf-8")
 
     # 3. Vocal removal
     instrumental_path = separate_vocals(mp3_path, song_cache)
