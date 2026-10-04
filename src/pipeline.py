@@ -1,6 +1,7 @@
 """Main processing pipeline: metadata → lyrics → stems → video."""
 
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -20,7 +21,13 @@ def process_song(mp3_path: Path) -> Path:
     meta = extract_metadata(mp3_path)
     artist = meta.get("artist", "Unknown")
     title = meta.get("title", mp3_path.stem)
-    safe_name = f"{artist} - {title}".replace("/", "_")
+
+    # Sanitize to prevent path traversal
+    raw_name = f"{artist} - {title}"
+    safe_name = re.sub(r'[^a-zA-Z0-9_\- ]', '', raw_name).strip()
+    # If the resulting name is empty or just dashes/spaces, use fallback
+    if not safe_name.replace("-", "").strip():
+        safe_name = "unknown_song"
 
     song_cache = CACHE_DIR / safe_name
     song_cache.mkdir(parents=True, exist_ok=True)
