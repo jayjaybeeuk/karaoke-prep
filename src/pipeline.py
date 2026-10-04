@@ -67,6 +67,23 @@ def separate_vocals(mp3_path: Path, output_dir: Path) -> Path:
         return output_dir / mp3_path.stem / "accompaniment.wav"
 
 
+def _escape_ffmpeg_path(path: str) -> str:
+    """Escape file path for FFmpeg filtergraph syntax."""
+    # First level escaping (for the filter option value)
+    s = path.replace('\\', '\\\\')
+    s = s.replace(':', '\\:')
+    s = s.replace("'", "\\'")
+
+    # Second level escaping (for the filtergraph description)
+    s2 = ""
+    for c in s:
+        if c in ['\\', ',', ';', '[', ']', '=', "'"]:
+            s2 += '\\' + c
+        else:
+            s2 += c
+    return s2
+
+
 def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     """Render karaoke video with lyrics overlay using FFmpeg."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -75,11 +92,13 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     ass_path = lrc_path.with_suffix(".ass")
     lrc_to_ass(lrc_path, ass_path)
 
+    escaped_ass_path = _escape_ffmpeg_path(str(ass_path))
+
     cmd = [
         "ffmpeg", "-y",
         "-f", "lavfi", "-i", "color=c=black:s=1920x1080:r=30",
         "-i", str(audio_path),
-        "-vf", f"ass={ass_path}",
+        "-vf", f"ass={escaped_ass_path}",
         "-shortest",
         "-c:v", "libx264", "-preset", "fast",
         "-c:a", "aac", "-b:a", "192k",
