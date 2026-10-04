@@ -2,7 +2,6 @@
 
 from pathlib import Path
 from mutagen.mp3 import MP3
-from mutagen.id3 import ID3
 
 
 def extract_metadata(mp3_path: Path) -> dict:
