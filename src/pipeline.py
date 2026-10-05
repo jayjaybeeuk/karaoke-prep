@@ -12,6 +12,8 @@ MEDIA_DIR = Path(os.environ.get("MEDIA_DIR", "/media"))
 CACHE_DIR = Path(os.environ.get("CACHE_DIR", "/cache"))
 STEM_ENGINE = os.environ.get("STEM_ENGINE", "demucs")
 
+LRC_PATTERN = re.compile(r"\[(\d+):(\d+\.\d+)\](.*)")
+
 
 def process_song(mp3_path: Path) -> Path:
     """Full pipeline: MP3 → karaoke video."""
@@ -64,7 +66,8 @@ def process_song(mp3_path: Path) -> Path:
 def separate_vocals(mp3_path: Path, output_dir: Path) -> Path:
     """Run stem separation and return path to instrumental."""
     if STEM_ENGINE == "demucs":
-        expected_out = output_dir / "htdemucs" / mp3_path.stem / "no_vocals.wav"
+        stem_dir = output_dir / "htdemucs" / mp3_path.stem
+        expected_out = stem_dir / "no_vocals.wav"
         if expected_out.exists():
             print(f"[pipeline] Using cached instrumental: {expected_out}")
             return expected_out
@@ -99,6 +102,23 @@ def separate_vocals(mp3_path: Path, output_dir: Path) -> Path:
         return expected_out
 
 
+def _escape_ffmpeg_path(path: str) -> str:
+    """Escape file path for FFmpeg filtergraph syntax."""
+    # First level escaping (for the filter option value)
+    s = path.replace('\\', '\\\\')
+    s = s.replace(':', '\\:')
+    s = s.replace("'", "\\'")
+
+    # Second level escaping (for the filtergraph description)
+    s2 = ""
+    for c in s:
+        if c in ['\\', ',', ';', '[', ']', '=', "'"]:
+            s2 += '\\' + c
+        else:
+            s2 += c
+    return s2
+
+
 def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     """Render karaoke video with lyrics overlay using FFmpeg."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -107,26 +127,16 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     ass_path = lrc_path.with_suffix(".ass")
     lrc_to_ass(lrc_path, ass_path)
 
+    escaped_ass_path = _escape_ffmpeg_path(str(ass_path))
+
     cmd = [
-        "ffmpeg",
-        "-y",
-        "-f",
-        "lavfi",
-        "-i",
-        "color=c=black:s=1920x1080:r=30",
-        "-i",
-        str(audio_path),
-        "-vf",
-        f"ass={ass_path}",
+        "ffmpeg", "-y",
+        "-f", "lavfi", "-i", "color=c=black:s=1920x1080:r=30",
+        "-i", str(audio_path),
+        "-vf", f"ass={escaped_ass_path}",
         "-shortest",
-        "-c:v",
-        "libx264",
-        "-preset",
-        "fast",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "192k",
+        "-c:v", "libx264", "-preset", "fast",
+        "-c:a", "aac", "-b:a", "192k",
         str(output_path),
     ]
     subprocess.run(cmd, check=True)
@@ -137,14 +147,10 @@ def lrc_to_ass(lrc_path: Path, ass_path: Path):
     lines = lrc_path.read_text(encoding="utf-8").strip().splitlines()
     events = []
 
-    import re
-
-    pattern = re.compile(r"\[(\d+):(\d+\.\d+)\](.*)")
-
     timestamps = []
     texts = []
     for line in lines:
-        m = pattern.match(line)
+        m = LRC_PATTERN.match(line)
         if m:
             minutes, seconds, text = m.groups()
             time_s = int(minutes) * 60 + float(seconds)
