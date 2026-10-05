@@ -22,6 +22,11 @@ def process_song(mp3_path: Path) -> Path:
     title = meta.get("title", mp3_path.stem)
     safe_name = f"{artist} - {title}".replace("/", "_")
 
+    output_path = MEDIA_DIR / f"{safe_name}.mp4"
+    if output_path.exists():
+        print(f"[pipeline] Output video already exists: {output_path}")
+        return output_path
+
     song_cache = CACHE_DIR / safe_name
     song_cache.mkdir(parents=True, exist_ok=True)
 
@@ -52,22 +57,39 @@ def process_song(mp3_path: Path) -> Path:
 def separate_vocals(mp3_path: Path, output_dir: Path) -> Path:
     """Run stem separation and return path to instrumental."""
     if STEM_ENGINE == "demucs":
+        expected_out = output_dir / "htdemucs" / mp3_path.stem / "no_vocals.wav"
+        if expected_out.exists():
+            print(f"[pipeline] Using cached instrumental: {expected_out}")
+            return expected_out
+
         subprocess.run(
-            ["python", "-m", "demucs", "-n", "htdemucs",
-             "--two-stems", "vocals", "-o", str(output_dir), str(mp3_path)],
+            [
+                "python",
+                "-m",
+                "demucs",
+                "-n",
+                "htdemucs",
+                "--two-stems",
+                "vocals",
+                "-o",
+                str(output_dir),
+                str(mp3_path),
+            ],
             check=True,
         )
-        # Demucs outputs to output_dir/htdemucs/<stem_name>/no_vocals.wav
-        stem_dir = output_dir / "htdemucs" / mp3_path.stem
-        return stem_dir / "no_vocals.wav"
+        return expected_out
     else:
         # Spleeter fallback
+        expected_out = output_dir / mp3_path.stem / "accompaniment.wav"
+        if expected_out.exists():
+            print(f"[pipeline] Using cached instrumental: {expected_out}")
+            return expected_out
+
         subprocess.run(
-            ["spleeter", "separate", "-o", str(output_dir),
-             "-p", "spleeter:2stems", str(mp3_path)],
+            ["spleeter", "separate", "-o", str(output_dir), "-p", "spleeter:2stems", str(mp3_path)],
             check=True,
         )
-        return output_dir / mp3_path.stem / "accompaniment.wav"
+        return expected_out
 
 
 def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
@@ -79,13 +101,25 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     lrc_to_ass(lrc_path, ass_path)
 
     cmd = [
-        "ffmpeg", "-y",
-        "-f", "lavfi", "-i", "color=c=black:s=1920x1080:r=30",
-        "-i", str(audio_path),
-        "-vf", f"ass={ass_path}",
+        "ffmpeg",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=black:s=1920x1080:r=30",
+        "-i",
+        str(audio_path),
+        "-vf",
+        f"ass={ass_path}",
         "-shortest",
-        "-c:v", "libx264", "-preset", "fast",
-        "-c:a", "aac", "-b:a", "192k",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
         str(output_path),
     ]
     subprocess.run(cmd, check=True)
@@ -97,6 +131,7 @@ def lrc_to_ass(lrc_path: Path, ass_path: Path):
     events = []
 
     import re
+
     pattern = re.compile(r"\[(\d+):(\d+\.\d+)\](.*)")
 
     timestamps = []
