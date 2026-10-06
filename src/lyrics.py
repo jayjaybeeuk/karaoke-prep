@@ -2,6 +2,7 @@
 
 import requests
 
+
 LRCLIB_BASE = "https://lrclib.net/api"
 
 
