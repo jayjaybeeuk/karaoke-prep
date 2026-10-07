@@ -26,7 +26,7 @@ def process_song(mp3_path: Path) -> Path:
 
     # Sanitize to prevent path traversal
     raw_name = f"{artist} - {title}"
-    safe_name = re.sub(r'[^a-zA-Z0-9_\- ]', '', raw_name).strip()
+    safe_name = re.sub(r"[^a-zA-Z0-9_\- ]", "", raw_name).strip()
     # If the resulting name is empty or just dashes/spaces, use fallback
     if not safe_name.replace("-", "").strip():
         safe_name = "unknown_song"
@@ -105,15 +105,15 @@ def separate_vocals(mp3_path: Path, output_dir: Path) -> Path:
 def _escape_ffmpeg_path(path: str) -> str:
     """Escape file path for FFmpeg filtergraph syntax."""
     # First level escaping (for the filter option value)
-    s = path.replace('\\', '\\\\')
-    s = s.replace(':', '\\:')
+    s = path.replace("\\", "\\\\")
+    s = s.replace(":", "\\:")
     s = s.replace("'", "\\'")
 
     # Second level escaping (for the filtergraph description)
     s2 = ""
     for c in s:
-        if c in ['\\', ',', ';', '[', ']', '=', "'"]:
-            s2 += '\\' + c
+        if c in ["\\", ",", ";", "[", "]", "=", "'"]:
+            s2 += "\\" + c
         else:
             s2 += c
     return s2
@@ -130,13 +130,25 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     escaped_ass_path = _escape_ffmpeg_path(str(ass_path))
 
     cmd = [
-        "ffmpeg", "-y",
-        "-f", "lavfi", "-i", "color=c=black:s=1920x1080:r=30",
-        "-i", str(audio_path),
-        "-vf", f"ass={escaped_ass_path}",
+        "ffmpeg",
+        "-y",
+        "-f",
+        "lavfi",
+        "-i",
+        "color=c=black:s=1920x1080:r=30",
+        "-i",
+        str(audio_path),
+        "-vf",
+        f"ass={escaped_ass_path}",
         "-shortest",
-        "-c:v", "libx264", "-preset", "fast",
-        "-c:a", "aac", "-b:a", "192k",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "fast",
+        "-c:a",
+        "aac",
+        "-b:a",
+        "192k",
         str(output_path),
     ]
     subprocess.run(cmd, check=True)
