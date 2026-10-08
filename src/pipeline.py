@@ -96,7 +96,15 @@ def separate_vocals(mp3_path: Path, output_dir: Path) -> Path:
             return expected_out
 
         subprocess.run(
-            ["spleeter", "separate", "-o", str(output_dir), "-p", "spleeter:2stems", str(mp3_path)],
+            [
+                "spleeter",
+                "separate",
+                "-o",
+                str(output_dir),
+                "-p",
+                "spleeter:2stems",
+                str(mp3_path),
+            ],
             check=True,
         )
         return expected_out
@@ -144,7 +152,7 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
         "-c:v",
         "libx264",
         "-preset",
-        "fast",
+        "ultrafast",  # ⚡ Bolt Optimization: ultrafast preset drastically reduces render time.
         "-c:a",
         "aac",
         "-b:a",
