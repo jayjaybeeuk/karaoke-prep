@@ -1,22 +1,17 @@
-import pytest
 import unittest
 import sys
 import os
 from pathlib import Path
 
 # Add src directory to path to import pipeline
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../src')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
-from pipeline import lrc_to_ass, _seconds_to_ass
+from pipeline import lrc_to_ass, _seconds_to_ass  # noqa: E402
 
 
 def test_lrc_to_ass(tmp_path: Path):
     # Setup dummy LRC file
-    lrc_content = (
-        "[01:05.12]Line 1\n"
-        "[01:10.00]Line 2\n"
-        "[01:15.00]"
-    )
+    lrc_content = "[01:05.12]Line 1\n" "[01:10.00]Line 2\n" "[01:15.00]"
     lrc_path = tmp_path / "test.lrc"
     lrc_path.write_text(lrc_content, encoding="utf-8")
 
@@ -70,5 +65,5 @@ class TestPipeline(unittest.TestCase):
                 self.assertEqual(_seconds_to_ass(seconds), expected)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()
