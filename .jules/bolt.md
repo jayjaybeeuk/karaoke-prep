@@ -9,3 +9,7 @@
 ## 2024-10-08 - FFmpeg libx264 preset optimization for static videos
 **Learning:** For rendering mostly static videos (like karaoke videos which are just a black background with text and audio), using the `-preset ultrafast` for libx264 in FFmpeg drastically reduces video generation time (e.g., 3-4x speedup) with negligible quality loss.
 **Action:** When generating simple static or text-based videos, always use the `ultrafast` preset to optimize processing time.
+
+## 2025-02-18 - Demucs Multiprocessing
+**Learning:** Demucs vocal separation is highly CPU-bound. When running via the CLI, using the `-j` flag to enable multiprocessing drastically reduces processing time compared to the default single-threaded behavior.
+**Action:** Always pass `-j {cores}` (e.g. `-j str(os.cpu_count())`) to Demucs CLI invocations to fully utilize available CPU cores and minimize pipeline latency.

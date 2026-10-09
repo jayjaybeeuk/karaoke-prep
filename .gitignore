@@ -10,3 +10,5 @@ karaoke-data/
 *.egg-info/
 dist/
 build/
+ffmpeg-*-static/
+ffmpeg-release-amd64-static.tar.xz

@@ -83,6 +83,10 @@ def separate_vocals(mp3_path: Path, output_dir: Path) -> Path:
                 "vocals",
                 "-o",
                 str(output_dir),
+                # ⚡ Bolt Optimization: Use multiprocessing (-j) to drastically speed up
+                # CPU-bound Demucs stem separation by fully utilizing available CPU cores.
+                "-j",
+                str(os.cpu_count() or 1),
                 str(mp3_path),
             ],
             check=True,
