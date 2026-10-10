@@ -53,7 +53,18 @@ def process_song(mp3_path: Path) -> Path:
             lrc_path.write_text("", encoding="utf-8")
 
     # 3. Vocal removal
-    instrumental_path = separate_vocals(mp3_path, song_cache)
+    if STEM_ENGINE == "demucs":
+        expected_instrumental = (
+            song_cache / "htdemucs" / mp3_path.stem / "no_vocals.wav"
+        )
+    else:
+        expected_instrumental = song_cache / mp3_path.stem / "accompaniment.wav"
+
+    if expected_instrumental.exists():
+        print(f"[pipeline] Using cached instrumental: {expected_instrumental}")
+        instrumental_path = expected_instrumental
+    else:
+        instrumental_path = separate_vocals(mp3_path, song_cache)
 
     # 4. Generate karaoke video
     output_path = MEDIA_DIR / f"{safe_name}.mp4"
@@ -68,9 +79,6 @@ def separate_vocals(mp3_path: Path, output_dir: Path) -> Path:
     if STEM_ENGINE == "demucs":
         stem_dir = output_dir / "htdemucs" / mp3_path.stem
         expected_out = stem_dir / "no_vocals.wav"
-        if expected_out.exists():
-            print(f"[pipeline] Using cached instrumental: {expected_out}")
-            return expected_out
 
         subprocess.run(
             [
@@ -95,9 +103,6 @@ def separate_vocals(mp3_path: Path, output_dir: Path) -> Path:
     else:
         # Spleeter fallback
         expected_out = output_dir / mp3_path.stem / "accompaniment.wav"
-        if expected_out.exists():
-            print(f"[pipeline] Using cached instrumental: {expected_out}")
-            return expected_out
 
         subprocess.run(
             [
