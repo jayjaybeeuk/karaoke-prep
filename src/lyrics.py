@@ -4,11 +4,16 @@ import requests
 
 LRCLIB_BASE = "https://lrclib.net/api"
 
+# ⚡ Bolt Optimization: Use a session to pool and reuse TCP/TLS connections.
+# This significantly speeds up subsequent requests, avoiding the overhead of
+# establishing a new connection on every lyrics fetch.
+session = requests.Session()
+
 
 def fetch_lyrics(artist: str, title: str) -> str | None:
     """Try LRCLIB for synced lyrics. Returns LRC string or None."""
     try:
-        resp = requests.get(
+        resp = session.get(
             f"{LRCLIB_BASE}/get",
             params={"artist_name": artist, "track_name": title},
             timeout=10,
