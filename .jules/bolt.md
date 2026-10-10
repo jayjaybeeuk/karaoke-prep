@@ -13,3 +13,10 @@
 ## 2025-02-18 - Demucs Multiprocessing
 **Learning:** Demucs vocal separation is highly CPU-bound. When running via the CLI, using the `-j` flag to enable multiprocessing drastically reduces processing time compared to the default single-threaded behavior.
 **Action:** Always pass `-j {cores}` (e.g. `-j str(os.cpu_count())`) to Demucs CLI invocations to fully utilize available CPU cores and minimize pipeline latency.
+
+## 2026-10-10 - requests connection pooling for APIs
+**Learning:** When making repeated requests to the same API (like lrclib in the watcher process), using  opens a new TCP/TLS connection every time which is slow.
+**Action:** Use a module-level `requests.Session()` to pool and reuse connections for significant latency improvements on subsequent fetches.
+
+## 2026-10-10 - requests connection pooling for APIs
+**Learning:** When making repeated requests to the same API (like lrclib in the watcher process), using requests.get() opens a new TCP/TLS connection every time which is slow.
