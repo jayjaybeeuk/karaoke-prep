@@ -162,6 +162,9 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
         "libx264",
         "-preset",
         "ultrafast",  # ⚡ Bolt Optimization: ultrafast preset drastically reduces render time.
+        # ⚡ Bolt Optimization: tune stillimage speeds up encoding for video with static background.
+        "-tune",
+        "stillimage",
         "-c:a",
         "aac",
         "-b:a",
