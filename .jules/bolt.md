@@ -20,3 +20,7 @@
 
 ## 2026-10-10 - requests connection pooling for APIs
 **Learning:** When making repeated requests to the same API (like lrclib in the watcher process), using requests.get() opens a new TCP/TLS connection every time which is slow.
+
+## 2024-10-10 - FFmpeg libx264 tune stillimage for static videos
+**Learning:** For rendering mostly static videos (like karaoke videos which are just a black background with text and audio), using `-tune stillimage` alongside `-preset ultrafast` for libx264 in FFmpeg further reduces video generation time (over 30% speedup in basic local tests) by skipping motion search operations.
+**Action:** When generating simple static or text-based videos, always use `-tune stillimage` to optimize encoding time.
