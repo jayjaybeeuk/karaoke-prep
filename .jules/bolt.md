@@ -24,3 +24,7 @@
 ## 2024-10-10 - FFmpeg libx264 tune stillimage for static videos
 **Learning:** For rendering mostly static videos (like karaoke videos which are just a black background with text and audio), using `-tune stillimage` alongside `-preset ultrafast` for libx264 in FFmpeg further reduces video generation time (over 30% speedup in basic local tests) by skipping motion search operations.
 **Action:** When generating simple static or text-based videos, always use `-tune stillimage` to optimize encoding time.
+
+## 2023-11-20 - Pre-compiling Regex
+**Learning:** Pre-compiling regex at the module level in python using `re.compile()` avoids redundant regex compilation overhead inside frequently called functions.
+**Action:** Always pre-compile regexes that are used within critical, frequently called functions or loops to minimize unnecessary overhead.

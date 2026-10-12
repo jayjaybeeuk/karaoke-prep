@@ -13,6 +13,9 @@ CACHE_DIR = Path(os.environ.get("CACHE_DIR", "/cache"))
 STEM_ENGINE = os.environ.get("STEM_ENGINE", "demucs")
 
 LRC_PATTERN = re.compile(r"\[(\d+):(\d+\.\d+)\](.*)")
+# ⚡ Bolt Optimization: Pre-compile regex at the module level to avoid redundant compilation
+# overhead during each function call.
+SANITIZE_PATTERN = re.compile(r"[^a-zA-Z0-9_\- ]")
 
 
 def process_song(mp3_path: Path) -> Path:
@@ -26,7 +29,7 @@ def process_song(mp3_path: Path) -> Path:
 
     # Sanitize to prevent path traversal
     raw_name = f"{artist} - {title}"
-    safe_name = re.sub(r"[^a-zA-Z0-9_\- ]", "", raw_name).strip()
+    safe_name = SANITIZE_PATTERN.sub("", raw_name).strip()
     # If the resulting name is empty or just dashes/spaces, use fallback
     if not safe_name.replace("-", "").strip():
         safe_name = "unknown_song"
