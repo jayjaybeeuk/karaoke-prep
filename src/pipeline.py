@@ -132,7 +132,7 @@ def _escape_ffmpeg_path(path: str) -> str:
     # Second level escaping (for the filtergraph description)
     s2 = ""
     for c in s:
-        if c in ["\\", ",", ";", "[", "]", "=", "'"]:
+        if c in "\\,;[]='":
             s2 += "\\" + c
         else:
             s2 += c
