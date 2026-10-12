@@ -24,3 +24,7 @@
 ## 2024-10-10 - FFmpeg libx264 tune stillimage for static videos
 **Learning:** For rendering mostly static videos (like karaoke videos which are just a black background with text and audio), using `-tune stillimage` alongside `-preset ultrafast` for libx264 in FFmpeg further reduces video generation time (over 30% speedup in basic local tests) by skipping motion search operations.
 **Action:** When generating simple static or text-based videos, always use `-tune stillimage` to optimize encoding time.
+
+## 2024-10-12 - Python string concatenation in loops vs Regex
+**Learning:** Iterating over a string character-by-character and concatenating strings in a loop (like `s2 += "\\" + c` for FFmpeg escaping) is an O(n²) operation and very slow in Python.
+**Action:** Use a precompiled regular expression and `re.sub` for string escaping/replacement, which is implemented in C and runs much faster than a manual loop in Python.

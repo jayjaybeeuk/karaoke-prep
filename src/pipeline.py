@@ -13,6 +13,8 @@ CACHE_DIR = Path(os.environ.get("CACHE_DIR", "/cache"))
 STEM_ENGINE = os.environ.get("STEM_ENGINE", "demucs")
 
 LRC_PATTERN = re.compile(r"\[(\d+):(\d+\.\d+)\](.*)")
+# ⚡ Bolt Optimization: Pre-compile regex for faster FFmpeg string escaping.
+FFMPEG_ESCAPE_PATTERN = re.compile(r"([\\,;\[\]='])")
 
 
 def process_song(mp3_path: Path) -> Path:
@@ -127,13 +129,8 @@ def _escape_ffmpeg_path(path: str) -> str:
     s = s.replace("'", "\\'")
 
     # Second level escaping (for the filtergraph description)
-    s2 = ""
-    for c in s:
-        if c in ["\\", ",", ";", "[", "]", "=", "'"]:
-            s2 += "\\" + c
-        else:
-            s2 += c
-    return s2
+    # ⚡ Bolt Optimization: Use regex substitution instead of slow python string concatenation loop.
+    return FFMPEG_ESCAPE_PATTERN.sub(r"\\\1", s)
 
 
 def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
