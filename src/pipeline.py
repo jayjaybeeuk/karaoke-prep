@@ -125,18 +125,20 @@ def separate_vocals(mp3_path: Path, output_dir: Path) -> Path:
 def _escape_ffmpeg_path(path: str) -> str:
     """Escape file path for FFmpeg filtergraph syntax."""
     # First level escaping (for the filter option value)
-    s = path.replace("\\", "\\\\")
-    s = s.replace(":", "\\:")
-    s = s.replace("'", "\\'")
+    s = path.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
 
     # Second level escaping (for the filtergraph description)
-    s2 = ""
-    for c in s:
-        if c in "\\,;[]='":
-            s2 += "\\" + c
-        else:
-            s2 += c
-    return s2
+    # ⚡ Bolt Optimization: Using string replace chaining is significantly faster
+    # than iterating over every character and concatenating strings in python.
+    return (
+        s.replace("\\", "\\\\")
+        .replace(",", "\\,")
+        .replace(";", "\\;")
+        .replace("[", "\\[")
+        .replace("]", "\\]")
+        .replace("=", "\\=")
+        .replace("'", "\\'")
+    )
 
 
 def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
