@@ -28,3 +28,7 @@
 ## 2023-11-20 - Pre-compiling Regex
 **Learning:** Pre-compiling regex at the module level in python using `re.compile()` avoids redundant regex compilation overhead inside frequently called functions.
 **Action:** Always pre-compile regexes that are used within critical, frequently called functions or loops to minimize unnecessary overhead.
+
+## 2024-10-10 - String replacement chaining vs iteration
+**Learning:** For escaping multiple characters in a string, using sequential `.replace()` calls is significantly faster (e.g. ~7x faster in benchmarks) than iterating over every character and building a new string with `+=`, which is a common python anti-pattern due to string immutability overhead.
+**Action:** Always prefer string replacement chaining (`.replace(x,y).replace(a,b)`) or regex substitution over character-by-character iteration and concatenation for simple string transformations.
