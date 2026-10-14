@@ -6,6 +6,10 @@
 **Learning:** Pre-compiling regex at the module level in python using `re.compile()` avoids redundant regex compilation overhead inside frequently called functions.
 **Action:** Always pre-compile regexes that are used within critical, frequently called functions or loops to minimize unnecessary overhead.
 
+## 2023-11-20 - String replace vs Regex for escaping
+**Learning:** For escaping multiple specific characters in a string, chaining `.replace()` calls is measurably faster (e.g. ~3.7x in benchmarks) than using `re.sub()` with a compiled regex in Python. The C implementation of string replacement has lower overhead than the regex engine for these exact literal replacements.
+**Action:** When escaping a known set of characters, use chained `.replace()` instead of a compiled regular expression.
+
 ## 2024-10-07 - Mutagen EasyID3 vs MP3 parsing speed
 **Learning:** Using `mutagen.mp3.MP3` parses the entire file structure (MPEG frame headers) to calculate the duration, bitrate, etc., which is relatively slow. Using `mutagen.easyid3.EasyID3` or `mutagen.id3.ID3` only loads the ID3 tags, providing a measurable speedup for metadata extraction.
 **Action:** When extracting only ID3 metadata like Title and Artist, use `mutagen.easyid3.EasyID3` or `mutagen.id3.ID3` directly to avoid expensive parsing of the entire file.
@@ -33,6 +37,7 @@
 ## 2026-10-10 - requests connection pooling for APIs
 **Learning:** When making repeated requests to the same API (like lrclib in the watcher process), using `requests.get()` opens a new TCP/TLS connection every time which is slow.
 **Action:** Use a module-level `requests.Session()` to pool and reuse connections for significant latency improvements on subsequent fetches.
-## 2023-11-20 - String replace vs Regex for escaping
-**Learning:** For escaping multiple specific characters in a string, chaining `.replace()` calls is measurably faster (e.g. ~3.7x in benchmarks) than using `re.sub()` with a compiled regex in Python. The C implementation of string replacement has lower overhead than the regex engine for these exact literal replacements.
-**Action:** When escaping a known set of characters, use chained `.replace()` instead of a compiled regular expression.
+
+## 2026-10-14 - Built-in divmod for simultaneous division and modulo
+**Learning:** When calculating both the quotient and remainder of a division (e.g. seconds to minutes/seconds), using Python's built-in `divmod()` function is faster than sequential floor division (`//`) and modulo (`%`) operations.
+**Action:** Use `divmod()` whenever both the quotient and remainder are needed from the same operation.
