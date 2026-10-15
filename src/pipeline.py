@@ -217,7 +217,7 @@ def lrc_to_ass(lrc_path: Path, ass_path: Path):
 
 
 def _seconds_to_ass(s: float) -> str:
-    h = int(s // 3600)
-    m = int((s % 3600) // 60)
-    sec = s % 60
-    return f"{h}:{m:02d}:{sec:05.2f}"
+    # ⚡ Bolt Optimization: Use built-in divmod for faster simultaneous quotient/remainder calculation.
+    m, sec = divmod(s, 60)
+    h, m = divmod(m, 60)
+    return f"{int(h)}:{int(m):02d}:{sec:05.2f}"
