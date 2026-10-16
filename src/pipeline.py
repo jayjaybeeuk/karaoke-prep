@@ -3,6 +3,7 @@
 import os
 import re
 import subprocess
+import concurrent.futures
 from pathlib import Path
 
 from lyrics import fetch_lyrics
@@ -42,20 +43,10 @@ def process_song(mp3_path: Path) -> Path:
     song_cache = CACHE_DIR / safe_name
     song_cache.mkdir(parents=True, exist_ok=True)
 
-    # 2. Fetch lyrics
+    # ⚡ Bolt Optimization: Use ThreadPoolExecutor to run independent network (lyrics fetch)
+    # and CPU (vocal separation) operations concurrently, reducing overall pipeline latency.
     lrc_path = song_cache / "lyrics.lrc"
-    if lrc_path.exists():
-        print(f"[pipeline] Using cached lyrics: {lrc_path}")
-    else:
-        lyrics = fetch_lyrics(artist, title)
-        if lyrics:
-            lrc_path.write_text(lyrics, encoding="utf-8")
-            print(f"[pipeline] Lyrics saved: {lrc_path}")
-        else:
-            print(f"[pipeline] No synced lyrics found for {safe_name}")
-            lrc_path.write_text("", encoding="utf-8")
 
-    # 3. Vocal removal
     if STEM_ENGINE == "demucs":
         expected_instrumental = (
             song_cache / "htdemucs" / mp3_path.stem / "no_vocals.wav"
@@ -63,11 +54,31 @@ def process_song(mp3_path: Path) -> Path:
     else:
         expected_instrumental = song_cache / mp3_path.stem / "accompaniment.wav"
 
-    if expected_instrumental.exists():
-        print(f"[pipeline] Using cached instrumental: {expected_instrumental}")
-        instrumental_path = expected_instrumental
-    else:
-        instrumental_path = separate_vocals(mp3_path, song_cache)
+    def fetch_lyrics_task():
+        if lrc_path.exists():
+            print(f"[pipeline] Using cached lyrics: {lrc_path}")
+        else:
+            lyrics = fetch_lyrics(artist, title)
+            if lyrics:
+                lrc_path.write_text(lyrics, encoding="utf-8")
+                print(f"[pipeline] Lyrics saved: {lrc_path}")
+            else:
+                print(f"[pipeline] No synced lyrics found for {safe_name}")
+                lrc_path.write_text("", encoding="utf-8")
+
+    def separate_vocals_task():
+        if expected_instrumental.exists():
+            print(f"[pipeline] Using cached instrumental: {expected_instrumental}")
+            return expected_instrumental
+        else:
+            return separate_vocals(mp3_path, song_cache)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+        future_lyrics = executor.submit(fetch_lyrics_task)
+        future_vocals = executor.submit(separate_vocals_task)
+
+        future_lyrics.result()
+        instrumental_path = future_vocals.result()
 
     # 4. Generate karaoke video
     output_path = MEDIA_DIR / f"{safe_name}.mp4"
@@ -217,7 +228,7 @@ def lrc_to_ass(lrc_path: Path, ass_path: Path):
 
 
 def _seconds_to_ass(s: float) -> str:
-    # ⚡ Bolt Optimization: Use built-in divmod for faster simultaneous quotient/remainder calculation.
+    # ⚡ Bolt Optimization: Use divmod for faster simultaneous quotient/remainder calculation.
     m, sec = divmod(s, 60)
     h, m = divmod(m, 60)
     return f"{int(h)}:{int(m):02d}:{sec:05.2f}"
