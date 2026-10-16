@@ -41,3 +41,6 @@
 ## 2026-10-14 - Built-in divmod for simultaneous division and modulo
 **Learning:** When calculating both the quotient and remainder of a division (e.g. seconds to minutes/seconds), using Python's built-in `divmod()` function is faster than sequential floor division (`//`) and modulo (`%`) operations.
 **Action:** Use `divmod()` whenever both the quotient and remainder are needed from the same operation.
+## 2023-11-20 - Concurrent I/O and CPU bound tasks
+**Learning:** In the processing pipeline, the `fetch_lyrics` network call and `separate_vocals` CPU-bound operation were previously executed sequentially. Since these operations do not depend on each other, running them sequentially results in cumulative latency (Network Time + CPU Time).
+**Action:** When a pipeline has independent network I/O and CPU-bound operations, execute them concurrently (e.g., using `concurrent.futures.ThreadPoolExecutor`) to overlap the execution and reduce total pipeline latency (to `max(Network Time, CPU Time)`).
