@@ -48,9 +48,7 @@ def process_song(mp3_path: Path) -> Path:
     lrc_path = song_cache / "lyrics.lrc"
 
     if STEM_ENGINE == "demucs":
-        expected_instrumental = (
-            song_cache / "htdemucs" / mp3_path.stem / "no_vocals.wav"
-        )
+        expected_instrumental = song_cache / "htdemucs" / mp3_path.stem / "no_vocals.wav"
     else:
         expected_instrumental = song_cache / mp3_path.stem / "accompaniment.wav"
 
@@ -156,12 +154,6 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     """Render karaoke video with lyrics overlay using FFmpeg."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # Convert LRC to ASS subtitle format for FFmpeg
-    ass_path = lrc_path.with_suffix(".ass")
-    lrc_to_ass(lrc_path, ass_path)
-
-    escaped_ass_path = _escape_ffmpeg_path(str(ass_path))
-
     cmd = [
         "ffmpeg",
         "-y",
@@ -171,22 +163,35 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
         "color=c=black:s=1920x1080:r=30",
         "-i",
         str(audio_path),
-        "-vf",
-        f"ass={escaped_ass_path}",
-        "-shortest",
-        "-c:v",
-        "libx264",
-        "-preset",
-        "ultrafast",  # ⚡ Bolt Optimization: ultrafast preset drastically reduces render time.
-        # ⚡ Bolt Optimization: tune stillimage speeds up encoding for video with static background.
-        "-tune",
-        "stillimage",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "192k",
-        str(output_path),
     ]
+
+    has_lyrics = lrc_path.exists() and bool(lrc_path.read_text(encoding="utf-8").strip())
+
+    if has_lyrics:
+        # Convert LRC to ASS subtitle format for FFmpeg
+        ass_path = lrc_path.with_suffix(".ass")
+        lrc_to_ass(lrc_path, ass_path)
+        escaped_ass_path = _escape_ffmpeg_path(str(ass_path))
+        # ⚡ Bolt Optimization: Only apply the ASS filter if lyrics exist to avoid overhead.
+        cmd.extend(["-vf", f"ass={escaped_ass_path}"])
+
+    cmd.extend(
+        [
+            "-shortest",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "ultrafast",  # ⚡ Bolt Optimization: ultrafast drastically reduces render time.
+            # ⚡ Bolt Optimization: tune stillimage speeds up encoding for static video.
+            "-tune",
+            "stillimage",
+            "-c:a",
+            "aac",
+            "-b:a",
+            "192k",
+            str(output_path),
+        ]
+    )
     subprocess.run(cmd, check=True)
 
 

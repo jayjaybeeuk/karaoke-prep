@@ -44,3 +44,7 @@
 ## 2023-11-20 - Concurrent I/O and CPU bound tasks
 **Learning:** In the processing pipeline, the `fetch_lyrics` network call and `separate_vocals` CPU-bound operation were previously executed sequentially. Since these operations do not depend on each other, running them sequentially results in cumulative latency (Network Time + CPU Time).
 **Action:** When a pipeline has independent network I/O and CPU-bound operations, execute them concurrently (e.g., using `concurrent.futures.ThreadPoolExecutor`) to overlap the execution and reduce total pipeline latency (to `max(Network Time, CPU Time)`).
+
+## 2025-02-18 - Conditionally applying FFmpeg video filters
+**Learning:** Applying an FFmpeg video filter like `ass` with an empty subtitle file still incurs significant processing overhead (e.g., evaluating the libass renderer) on every single video frame, slowing down render times by ~17% unnecessarily.
+**Action:** Always verify that input data (like a lyrics file) is not empty before dynamically including its respective video filter in the FFmpeg command.
