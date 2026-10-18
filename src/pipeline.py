@@ -154,18 +154,22 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     """Render karaoke video with lyrics overlay using FFmpeg."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
+    has_lyrics = lrc_path.exists() and bool(lrc_path.read_text(encoding="utf-8").strip())
+
+    # ⚡ Bolt Optimization: Drop framerate to 1 fps if there are no lyrics (static black screen)
+    # This significantly reduces rendering time for unsynced tracks.
+    fps = 30 if has_lyrics else 1
+
     cmd = [
         "ffmpeg",
         "-y",
         "-f",
         "lavfi",
         "-i",
-        "color=c=black:s=1920x1080:r=30",
+        f"color=c=black:s=1920x1080:r={fps}",
         "-i",
         str(audio_path),
     ]
-
-    has_lyrics = lrc_path.exists() and bool(lrc_path.read_text(encoding="utf-8").strip())
 
     if has_lyrics:
         # Convert LRC to ASS subtitle format for FFmpeg

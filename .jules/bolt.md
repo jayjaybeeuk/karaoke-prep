@@ -48,3 +48,7 @@
 ## 2025-02-18 - Conditionally applying FFmpeg video filters
 **Learning:** Applying an FFmpeg video filter like `ass` with an empty subtitle file still incurs significant processing overhead (e.g., evaluating the libass renderer) on every single video frame, slowing down render times by ~17% unnecessarily.
 **Action:** Always verify that input data (like a lyrics file) is not empty before dynamically including its respective video filter in the FFmpeg command.
+
+## 2024-10-18 - Dynamic framerate for static videos
+**Learning:** Generating static videos (e.g., black backgrounds without subtitles) at high framerates (like 30fps) adds unnecessary encoding overhead, even when using `-tune stillimage`. Reducing the framerate to 1 fps for completely static videos results in a significant speedup (~1.75x) in FFmpeg processing time.
+**Action:** Dynamically adjust the video framerate in FFmpeg based on whether motion or updates (like subtitles) are present. For completely static outputs, lower the framerate (`-r 1`) to improve performance.
