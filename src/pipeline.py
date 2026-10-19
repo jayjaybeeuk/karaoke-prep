@@ -154,7 +154,10 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     """Render karaoke video with lyrics overlay using FFmpeg."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    has_lyrics = lrc_path.exists() and bool(lrc_path.read_text(encoding="utf-8").strip())
+    # ⚡ Bolt Optimization: Use os.stat().st_size instead of reading the entire file into memory
+    # to check if it's empty. This significantly speeds up the check for large files and reduces
+    # memory overhead.
+    has_lyrics = lrc_path.exists() and lrc_path.stat().st_size > 0
 
     # ⚡ Bolt Optimization: Drop framerate to 1 fps if there are no lyrics (static black screen)
     # This significantly reduces rendering time for unsynced tracks.
@@ -201,19 +204,19 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
 
 def lrc_to_ass(lrc_path: Path, ass_path: Path):
     """Convert LRC lyrics to ASS subtitle format."""
-    lines = lrc_path.read_text(encoding="utf-8").strip().splitlines()
-    events = []
+    # ⚡ Bolt Optimization: Use re.finditer on the full string instead of splitting into
+    # lines and matching line-by-line. This avoids creating intermediate lists of lines
+    # and significantly improves parsing speed for large lyrics files.
+    content = lrc_path.read_text(encoding="utf-8")
 
     timestamps = []
     texts = []
-    for line in lines:
-        m = LRC_PATTERN.match(line)
-        if m:
-            minutes, seconds, text = m.groups()
-            time_s = int(minutes) * 60 + float(seconds)
-            timestamps.append(time_s)
-            texts.append(text.strip())
+    for m in LRC_PATTERN.finditer(content):
+        minutes, seconds, text = m.groups()
+        timestamps.append(int(minutes) * 60 + float(seconds))
+        texts.append(text.strip())
 
+    events = []
     # Build ASS events
     for i, (ts, text) in enumerate(zip(timestamps, texts)):
         if not text:
@@ -223,16 +226,21 @@ def lrc_to_ass(lrc_path: Path, ass_path: Path):
         end_ass = _seconds_to_ass(end)
         events.append(f"Dialogue: 0,{start_ass},{end_ass},Default,,0,0,0,,{text}")
 
-    ass_content = (
-        "[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n\n"
-        "[V4+ Styles]\nFormat: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,"
-        "OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,"
-        "Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
-        "Style: Default,Arial,64,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,"
-        "-1,0,0,0,100,100,0,0,1,3,1,2,50,50,50,1\n\n"
-        "[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text\n"
+    # ⚡ Bolt Optimization: Use list unpacking join `"\n".join([headers, *events])`
+    # instead of `headers + "\n".join(events)`. String concatenation on large blocks
+    # is slower in Python than joining a single list.
+    ass_content = "\n".join(
+        [
+            "[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n\n"
+            "[V4+ Styles]\nFormat: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,"
+            "OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,"
+            "Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
+            "Style: Default,Arial,64,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,"
+            "-1,0,0,0,100,100,0,0,1,3,1,2,50,50,50,1\n\n"
+            "[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text",
+            *events,
+        ]
     )
-    ass_content += "\n".join(events)
     ass_path.write_text(ass_content, encoding="utf-8")
 
 
@@ -240,4 +248,6 @@ def _seconds_to_ass(s: float) -> str:
     # ⚡ Bolt Optimization: Use divmod for faster simultaneous quotient/remainder calculation.
     m, sec = divmod(s, 60)
     h, m = divmod(m, 60)
-    return f"{int(h)}:{int(m):02d}:{sec:05.2f}"
+    # ⚡ Bolt Optimization: %-formatting is slightly faster than f-strings when explicit
+    # type casting (int(h)) is involved in the formatting expression.
+    return "%d:%02d:%05.2f" % (h, m, sec)

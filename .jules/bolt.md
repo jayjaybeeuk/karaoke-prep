@@ -52,3 +52,19 @@
 ## 2024-10-18 - Dynamic framerate for static videos
 **Learning:** Generating static videos (e.g., black backgrounds without subtitles) at high framerates (like 30fps) adds unnecessary encoding overhead, even when using `-tune stillimage`. Reducing the framerate to 1 fps for completely static videos results in a significant speedup (~1.75x) in FFmpeg processing time.
 **Action:** Dynamically adjust the video framerate in FFmpeg based on whether motion or updates (like subtitles) are present. For completely static outputs, lower the framerate (`-r 1`) to improve performance.
+
+## 2023-11-20 - Fast file content check using stat
+**Learning:** Checking if a file has content by reading it entirely into memory (e.g. `bool(Path.read_text().strip())`) is an O(n) operation bound by I/O and memory allocation, taking significant time for large files.
+**Action:** Use `Path.stat().st_size > 0` to check if a file has content. This just checks file metadata, which is O(1) and significantly faster, preventing unnecessary memory overhead.
+
+## 2023-11-20 - Regex finditer vs splitlines
+**Learning:** Using `str.splitlines()` followed by a loop and line-by-line regex `match()` creates a large intermediate list of strings, causing unnecessary memory overhead and latency.
+**Action:** Use `re.finditer(content)` directly on the entire string when parsing multi-line text to avoid intermediate list creation and improve speed.
+
+## 2023-11-20 - Python string concatenation vs list join unpacking
+**Learning:** Concatenating a large block of text (like file headers) with the result of a `"\n".join()` operation (`headers + "\n".join(events)`) is slower than joining a single unpacked list containing all elements.
+**Action:** Use list unpacking for faster string assembly when combining headers/footers with an array of events: `"\n".join([header, *events])`.
+
+## 2023-11-20 - String formatting speed with type casting
+**Learning:** When string formatting involves explicit type casting (like `int(h)`), the old-style `%` formatting (`"%d:%02d:%05.2f" % (h, m, sec)`) can execute measurably faster than f-strings (`f"{int(h)}:{int(m):02d}:{sec:05.2f}"`) in tight loops.
+**Action:** For highly repetitive string formatting involving numerical casting (like generating subtitle timestamps), consider `%` formatting over f-strings for micro-optimization if it forms a bottleneck.
