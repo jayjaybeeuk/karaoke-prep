@@ -52,3 +52,11 @@
 ## 2024-10-18 - Dynamic framerate for static videos
 **Learning:** Generating static videos (e.g., black backgrounds without subtitles) at high framerates (like 30fps) adds unnecessary encoding overhead, even when using `-tune stillimage`. Reducing the framerate to 1 fps for completely static videos results in a significant speedup (~1.75x) in FFmpeg processing time.
 **Action:** Dynamically adjust the video framerate in FFmpeg based on whether motion or updates (like subtitles) are present. For completely static outputs, lower the framerate (`-r 1`) to improve performance.
+
+## 2025-02-18 - String replacement chaining vs splitlines+regex
+**Learning:** In Python, using `re.finditer` on an entire string avoids creating large intermediate lists and is more memory-efficient and faster than using `str.splitlines()` followed by line-by-line regex matching.
+**Action:** Always prefer `re.finditer` over `str.splitlines()` + `re.match()` when extracting information from large multiline strings.
+
+## 2025-02-18 - String join with unpacking vs concatenation
+**Learning:** In Python, assembling large strings by unpacking elements into a single list and using `join()` (e.g., `"\n".join([header, *events])`) is faster than concatenating string literals with the result of another `join()` (e.g. `header + "\n".join(events)`).
+**Action:** Use list unpacking within a single `join()` call for optimal string assembly performance instead of mixing `join()` with string concatenation.
