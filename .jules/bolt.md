@@ -60,3 +60,7 @@
 ## 2025-02-18 - String join with unpacking vs concatenation
 **Learning:** In Python, assembling large strings by unpacking elements into a single list and using `join()` (e.g., `"\n".join([header, *events])`) is faster than concatenating string literals with the result of another `join()` (e.g. `header + "\n".join(events)`).
 **Action:** Use list unpacking within a single `join()` call for optimal string assembly performance instead of mixing `join()` with string concatenation.
+
+## 2025-02-18 - C-style formatting vs f-strings
+**Learning:** In Python, C-style `%` string formatting (e.g., `"%d:%02d:%05.2f" % (h, m, sec)`) can be faster than f-strings when dealing with specific float/int conversions by bypassing Python `int()` overhead.
+**Action:** When speed is critical and formatting involves basic numeric conversions, prefer C-style formatting.
