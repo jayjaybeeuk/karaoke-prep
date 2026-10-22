@@ -242,4 +242,6 @@ def _seconds_to_ass(s: float) -> str:
     # ⚡ Bolt Optimization: Use divmod for faster simultaneous quotient/remainder calculation.
     m, sec = divmod(s, 60)
     h, m = divmod(m, 60)
-    return f"{int(h)}:{int(m):02d}:{sec:05.2f}"
+    # ⚡ Bolt Optimization: C-style % string formatting is faster than f-strings
+    # for specific float/int conversions by bypassing Python int() overhead.
+    return "%d:%02d:%05.2f" % (h, m, sec)
