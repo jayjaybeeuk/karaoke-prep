@@ -64,3 +64,7 @@
 ## 2025-02-18 - String Formatting (f-string vs C-style)
 **Learning:** In Python, C-style `%` string formatting (e.g., `"%d:%02d:%05.2f" % (h, m, sec)`) can be faster than f-strings when dealing with specific float/int conversions by bypassing Python `int()` overhead.
 **Action:** Use C-style string formatting when converting numeric types in performance-critical sections (e.g., building subtitle timestamps).
+
+## 2025-02-18 - Caching logic vs Original Filenames
+**Learning:** Tying cache retrieval strict logic to the original source file name (e.g. `mp3_path.stem`) inside a stable identifier cache directory defeats the purpose of the cache if the input source filename changes. If metadata matches but filename differs, the expensive process would re-run and save to a new subdirectory.
+**Action:** When searching for cached outputs that are saved in subdirectories tied to original source names, use wildcard matching (like `.glob()`) against the stable metadata-based directory to improve the cache hit rate and avoid redundant work.

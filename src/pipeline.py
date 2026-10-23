@@ -48,9 +48,15 @@ def process_song(mp3_path: Path) -> Path:
     lrc_path = song_cache / "lyrics.lrc"
 
     if STEM_ENGINE == "demucs":
-        expected_instrumental = song_cache / "htdemucs" / mp3_path.stem / "no_vocals.wav"
+        # ⚡ Bolt Optimization: Use glob to check if ANY instrumental exists for this track's
+        # metadata, ignoring the original filename. This prevents re-running Demucs if renamed.
+        cached = next(song_cache.glob("htdemucs/*/no_vocals.wav"), None)
+        expected_instrumental = (
+            cached or song_cache / "htdemucs" / mp3_path.stem / "no_vocals.wav"
+        )
     else:
-        expected_instrumental = song_cache / mp3_path.stem / "accompaniment.wav"
+        cached = next(song_cache.glob("*/accompaniment.wav"), None)
+        expected_instrumental = cached or song_cache / mp3_path.stem / "accompaniment.wav"
 
     def fetch_lyrics_task():
         if lrc_path.exists():
