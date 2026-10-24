@@ -44,6 +44,30 @@ def test_lrc_to_ass(tmp_path: Path):
     assert "Line 2" in events[1]
 
 
+def test_lrc_to_ass_injection(tmp_path: Path):
+    # Setup dummy LRC file with a malicious injection
+    lrc_content = "[01:05.12]Normal Line\n[01:10.00]Malicious {\\pos(0,0)}Line\n"
+    lrc_path = tmp_path / "test_inj.lrc"
+    lrc_path.write_text(lrc_content, encoding="utf-8")
+
+    ass_path = tmp_path / "test_inj.ass"
+
+    # Run the conversion
+    lrc_to_ass(lrc_path, ass_path)
+
+    # Verify the output
+    assert ass_path.exists()
+    ass_content = ass_path.read_text(encoding="utf-8")
+
+    events = [line for line in ass_content.splitlines() if line.startswith("Dialogue:")]
+    assert len(events) == 2
+
+    # Check that curly braces are removed
+    assert "Malicious \\pos(0,0)Line" in events[1]
+    assert "{" not in events[1]
+    assert "}" not in events[1]
+
+
 class TestPipeline(unittest.TestCase):
     def test_seconds_to_ass(self):
         """Test conversion of seconds to ASS format h:mm:ss.cs"""

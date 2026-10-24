@@ -225,7 +225,9 @@ def lrc_to_ass(lrc_path: Path, ass_path: Path):
         end = timestamps[i + 1] if i + 1 < len(timestamps) else ts + 5.0
         start_ass = _seconds_to_ass(ts)
         end_ass = _seconds_to_ass(end)
-        events.append(f"Dialogue: 0,{start_ass},{end_ass},Default,,0,0,0,,{text}")
+        # Sanitize text to prevent subtitle injection
+        safe_text = text.replace("{", "").replace("}", "")
+        events.append(f"Dialogue: 0,{start_ass},{end_ass},Default,,0,0,0,,{safe_text}")
 
     ass_header = (
         "[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n\n"
