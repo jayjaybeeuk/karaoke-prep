@@ -1,5 +1,4 @@
 import re
-from pathlib import Path
 
 def sanitize_name(artist, title):
     raw_name = f"{artist} - {title}"
