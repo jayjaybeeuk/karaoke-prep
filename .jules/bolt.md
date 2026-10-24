@@ -68,3 +68,7 @@
 ## 2025-02-18 - Caching logic vs Original Filenames
 **Learning:** Tying cache retrieval strict logic to the original source file name (e.g. `mp3_path.stem`) inside a stable identifier cache directory defeats the purpose of the cache if the input source filename changes. If metadata matches but filename differs, the expensive process would re-run and save to a new subdirectory.
 **Action:** When searching for cached outputs that are saved in subdirectories tied to original source names, use wildcard matching (like `.glob()`) against the stable metadata-based directory to improve the cache hit rate and avoid redundant work.
+
+## 2023-11-20 - Redundant disk I/O and duplicate string allocation
+**Learning:** In pipelines, reading the same file twice (e.g., checking content length before processing, and then reading again inside a processing function) introduces redundant file system I/O overhead. Additionally, parsing strings into intermediate lists (like `timestamps` and `texts`) when generating subtitles uses unnecessary memory and requires multiple passes.
+**Action:** Use a `try/except FileNotFoundError` block to read the file once, capturing the content string. Pass this string directly to helper functions, and refactor text processing to construct output events in a single O(N) pass, avoiding intermediate list allocations.
