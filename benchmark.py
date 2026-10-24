@@ -4,9 +4,10 @@ import tempfile
 import sys
 import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 import pipeline
-from pipeline import process_song, CACHE_DIR, MEDIA_DIR
+from pipeline import process_song
+
 
 def run_benchmark():
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -47,6 +48,7 @@ def run_benchmark():
             pipeline.extract_metadata = original_extract
             pipeline.separate_vocals = original_separate
             pipeline.generate_video = original_generate
+
 
 if __name__ == "__main__":
     run_benchmark()
