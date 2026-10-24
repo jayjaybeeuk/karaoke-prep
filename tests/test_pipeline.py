@@ -6,7 +6,7 @@ from pathlib import Path
 # Add src directory to path to import pipeline
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
-from pipeline import lrc_to_ass, _seconds_to_ass  # noqa: E402
+from pipeline import lrc_to_ass, _seconds_to_ass, _escape_ffmpeg_path  # noqa: E402
 
 
 def test_lrc_to_ass(tmp_path: Path):
@@ -63,6 +63,36 @@ class TestPipeline(unittest.TestCase):
         for seconds, expected in test_cases:
             with self.subTest(seconds=seconds):
                 self.assertEqual(_seconds_to_ass(seconds), expected)
+
+    def test_escape_ffmpeg_path(self):
+        """Test escaping of paths for FFmpeg filtergraph syntax."""
+        test_cases = [
+            # Normal paths
+            ("normal/path/file.mp4", "normal/path/file.mp4"),
+            ("path_with_underscore", "path_with_underscore"),
+            # Characters that need first-level escaping only (not true, they all get second level)
+            # Actually, `_escape_ffmpeg_path` applies two levels of escaping sequentially.
+            # backslash -> double -> quad
+            ("C:\\Windows\\Path", "C\\\\:\\\\\\\\Windows\\\\\\\\Path"),
+            # : -> \: -> \\:
+            ("path/with:colon", "path/with\\\\:colon"),
+            # ' -> \' -> \\\'
+            ("path/with'quote", "path/with\\\\\\'quote"),
+            # , -> \,
+            ("path/with,comma", "path/with\\,comma"),
+            # ; -> \;
+            ("path/with;semicolon", "path/with\\;semicolon"),
+            # [ -> \[
+            ("path/with[bracket", "path/with\\[bracket"),
+            # ] -> \]
+            ("path/with]bracket", "path/with\\]bracket"),
+            # = -> \=
+            ("path/with=equals", "path/with\\=equals"),
+        ]
+
+        for path, expected in test_cases:
+            with self.subTest(path=path):
+                self.assertEqual(_escape_ffmpeg_path(path), expected)
 
 
 if __name__ == "__main__":
