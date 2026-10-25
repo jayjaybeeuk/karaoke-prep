@@ -218,6 +218,7 @@ def lrc_to_ass(content: str, ass_path: Path):
     events = []
 
     prev_ts = None
+    prev_ts_ass = None
     prev_text = None
 
     for m in LRC_PATTERN.finditer(content):
@@ -225,19 +226,21 @@ def lrc_to_ass(content: str, ass_path: Path):
         text = text.strip()
         ts = int(minutes) * 60 + float(seconds)
 
-        if prev_ts is not None and prev_text:
-            start_ass = _seconds_to_ass(prev_ts)
-            end_ass = _seconds_to_ass(ts)
-            events.append(f"Dialogue: 0,{start_ass},{end_ass},Default,,0,0,0,,{prev_text}")
+        # ⚡ Bolt Optimization: Cache the formatted timestamp to avoid recalculating
+        # _seconds_to_ass for the same timestamp in the next iteration.
+        ts_ass = _seconds_to_ass(ts)
+
+        if prev_ts_ass is not None and prev_text:
+            events.append(f"Dialogue: 0,{prev_ts_ass},{ts_ass},Default,,0,0,0,,{prev_text}")
 
         prev_ts = ts
+        prev_ts_ass = ts_ass
         prev_text = text
 
     # Add the final event
-    if prev_ts is not None and prev_text:
-        start_ass = _seconds_to_ass(prev_ts)
+    if prev_ts_ass is not None and prev_text:
         end_ass = _seconds_to_ass(prev_ts + 5.0)
-        events.append(f"Dialogue: 0,{start_ass},{end_ass},Default,,0,0,0,,{prev_text}")
+        events.append(f"Dialogue: 0,{prev_ts_ass},{end_ass},Default,,0,0,0,,{prev_text}")
 
     ass_header = (
         "[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n\n"

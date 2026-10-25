@@ -72,3 +72,7 @@
 ## 2023-11-20 - Redundant disk I/O and duplicate string allocation
 **Learning:** In pipelines, reading the same file twice (e.g., checking content length before processing, and then reading again inside a processing function) introduces redundant file system I/O overhead. Additionally, parsing strings into intermediate lists (like `timestamps` and `texts`) when generating subtitles uses unnecessary memory and requires multiple passes.
 **Action:** Use a `try/except FileNotFoundError` block to read the file once, capturing the content string. Pass this string directly to helper functions, and refactor text processing to construct output events in a single O(N) pass, avoiding intermediate list allocations.
+
+## 2025-02-18 - Caching formatted string calculations in continuous loops
+**Learning:** In continuous processing loops (e.g. converting a series of LRC timestamps into subtitle intervals where each line forms the start time and the next line's start forms the end time), calculating complex formatting functions (like `_seconds_to_ass`) on both the current and previous timestamps causes redundant work because the "current" timestamp becomes the "previous" timestamp in the next iteration.
+**Action:** When a calculation is needed on variables across consecutive loop iterations, cache the result of the calculation in a variable (e.g. `prev_ts_ass = ts_ass`) and reuse it in the next iteration instead of recalculating it.
