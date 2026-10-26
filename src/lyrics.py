@@ -28,7 +28,7 @@ def fetch_lyrics(artist: str, title: str) -> str | None:
             if plain:
                 print(f"[lyrics] Only plain (unsynced) lyrics found for {artist} - {title}")
                 return None  # Can't use unsynced for karaoke timing
-    except Exception as e:
+    except requests.exceptions.RequestException as e:
         print(f"[lyrics] LRCLIB error: {e}")
 
     return None
