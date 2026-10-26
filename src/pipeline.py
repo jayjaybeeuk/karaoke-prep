@@ -18,6 +18,16 @@ LRC_PATTERN = re.compile(r"\[(\d+):(\d+\.\d+)\](.*)")
 # overhead during each function call.
 SANITIZE_PATTERN = re.compile(r"[^a-zA-Z0-9_\- ]")
 
+ASS_HEADER = (
+    "[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n\n"
+    "[V4+ Styles]\nFormat: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,"
+    "OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,"
+    "Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
+    "Style: Default,Arial,64,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,"
+    "-1,0,0,0,100,100,0,0,1,3,1,2,50,50,50,1\n\n"
+    "[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text"
+)
+
 
 def process_song(mp3_path: Path) -> Path:
     """Full pipeline: MP3 → karaoke video."""
@@ -48,9 +58,13 @@ def process_song(mp3_path: Path) -> Path:
     lrc_path = song_cache / "lyrics.lrc"
 
     if STEM_ENGINE == "demucs":
-        expected_instrumental = song_cache / "htdemucs" / mp3_path.stem / "no_vocals.wav"
+        # ⚡ Bolt Optimization: Use glob to check if ANY instrumental exists for this track's
+        # metadata, ignoring the original filename. This prevents re-running Demucs if renamed.
+        cached = next(song_cache.glob("htdemucs/*/no_vocals.wav"), None)
+        expected_instrumental = cached or song_cache / "htdemucs" / mp3_path.stem / "no_vocals.wav"
     else:
-        expected_instrumental = song_cache / mp3_path.stem / "accompaniment.wav"
+        cached = next(song_cache.glob("*/accompaniment.wav"), None)
+        expected_instrumental = cached or song_cache / mp3_path.stem / "accompaniment.wav"
 
     def fetch_lyrics_task():
         if lrc_path.exists():
@@ -154,10 +168,15 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     """Render karaoke video with lyrics overlay using FFmpeg."""
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # ⚡ Bolt Optimization: Use os.stat().st_size instead of reading the entire file into memory
-    # to check if it's empty. This significantly speeds up the check for large files and reduces
-    # memory overhead.
-    has_lyrics = lrc_path.exists() and lrc_path.stat().st_size > 0
+    # ⚡ Bolt Optimization: Read the file once with try/except to avoid redundant I/O stats
+    # and duplicate file reading during lrc_to_ass generation.
+    lrc_content = ""
+    try:
+        lrc_content = lrc_path.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        pass
+
+    has_lyrics = bool(lrc_content)
 
     # ⚡ Bolt Optimization: Drop framerate to 1 fps if there are no lyrics (static black screen)
     # This significantly reduces rendering time for unsynced tracks.
@@ -177,7 +196,7 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     if has_lyrics:
         # Convert LRC to ASS subtitle format for FFmpeg
         ass_path = lrc_path.with_suffix(".ass")
-        lrc_to_ass(lrc_path, ass_path)
+        lrc_to_ass(lrc_content, ass_path)
         escaped_ass_path = _escape_ffmpeg_path(str(ass_path))
         # ⚡ Bolt Optimization: Only apply the ASS filter if lyrics exist to avoid overhead.
         cmd.extend(["-vf", f"ass={escaped_ass_path}"])
@@ -202,45 +221,40 @@ def generate_video(audio_path: Path, lrc_path: Path, output_path: Path):
     subprocess.run(cmd, check=True)
 
 
-def lrc_to_ass(lrc_path: Path, ass_path: Path):
+def lrc_to_ass(content: str, ass_path: Path):
     """Convert LRC lyrics to ASS subtitle format."""
-    # ⚡ Bolt Optimization: Use re.finditer on the full string instead of splitting into
-    # lines and matching line-by-line. This avoids creating intermediate lists of lines
-    # and significantly improves parsing speed for large lyrics files.
-    content = lrc_path.read_text(encoding="utf-8")
+    # ⚡ Bolt Optimization: Process in a single O(N) pass to avoid intermediate
+    # list allocations for timestamps and texts.
+    events = []
 
-    timestamps = []
-    texts = []
+    prev_ts = None
+    prev_ts_ass = None
+    prev_text = None
+
     for m in LRC_PATTERN.finditer(content):
         minutes, seconds, text = m.groups()
-        timestamps.append(int(minutes) * 60 + float(seconds))
-        texts.append(text.strip())
+        text = text.strip()
+        ts = int(minutes) * 60 + float(seconds)
 
-    events = []
-    # Build ASS events
-    for i, (ts, text) in enumerate(zip(timestamps, texts)):
-        if not text:
-            continue
-        end = timestamps[i + 1] if i + 1 < len(timestamps) else ts + 5.0
-        start_ass = _seconds_to_ass(ts)
-        end_ass = _seconds_to_ass(end)
-        events.append(f"Dialogue: 0,{start_ass},{end_ass},Default,,0,0,0,,{text}")
+        # ⚡ Bolt Optimization: Cache the formatted timestamp to avoid recalculating
+        # _seconds_to_ass for the same timestamp in the next iteration.
+        ts_ass = _seconds_to_ass(ts)
 
-    # ⚡ Bolt Optimization: Use list unpacking join `"\n".join([headers, *events])`
-    # instead of `headers + "\n".join(events)`. String concatenation on large blocks
-    # is slower in Python than joining a single list.
-    ass_content = "\n".join(
-        [
-            "[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n\n"
-            "[V4+ Styles]\nFormat: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,"
-            "OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,"
-            "Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
-            "Style: Default,Arial,64,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,"
-            "-1,0,0,0,100,100,0,0,1,3,1,2,50,50,50,1\n\n"
-            "[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text",
-            *events,
-        ]
-    )
+        if prev_ts_ass is not None and prev_text:
+            events.append(f"Dialogue: 0,{prev_ts_ass},{ts_ass},Default,,0,0,0,,{prev_text}")
+
+        prev_ts = ts
+        prev_ts_ass = ts_ass
+        prev_text = text
+
+    # Add the final event
+    if prev_ts_ass is not None and prev_text:
+        end_ass = _seconds_to_ass(prev_ts + 5.0)
+        events.append(f"Dialogue: 0,{prev_ts_ass},{end_ass},Default,,0,0,0,,{prev_text}")
+
+    # ⚡ Bolt Optimization: Unpack elements into a single list for join().
+    # String concatenation with another string that's been joined is slower.
+    ass_content = "\n".join([ASS_HEADER, *events])
     ass_path.write_text(ass_content, encoding="utf-8")
 
 
@@ -248,6 +262,6 @@ def _seconds_to_ass(s: float) -> str:
     # ⚡ Bolt Optimization: Use divmod for faster simultaneous quotient/remainder calculation.
     m, sec = divmod(s, 60)
     h, m = divmod(m, 60)
-    # ⚡ Bolt Optimization: %-formatting is slightly faster than f-strings when explicit
-    # type casting (int(h)) is involved in the formatting expression.
+    # ⚡ Bolt Optimization: C-style % string formatting is faster than f-strings
+    # for specific float/int conversions by bypassing Python int() overhead.
     return "%d:%02d:%05.2f" % (h, m, sec)

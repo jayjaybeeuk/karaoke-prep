@@ -1,5 +1,6 @@
 """Watch incoming directory for new MP3s and process them."""
 
+import logging
 import os
 import time
 from pathlib import Path
@@ -16,15 +17,18 @@ class MP3Handler(FileSystemEventHandler):
         if event.is_directory:
             return
         if event.src_path.lower().endswith(".mp3"):
-            print(f"[karaoke-prep] New file detected: {event.src_path}")
+            logging.info(f"New file detected: {event.src_path}")
             try:
                 process_song(Path(event.src_path))
             except Exception as e:
-                print(f"[karaoke-prep] Error processing {event.src_path}: {e}")
+                logging.error(f"Error processing {event.src_path}: {e}")
 
 
 def main():
-    print(f"[karaoke-prep] Watching {INCOMING_DIR} for new MP3s...")
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
+    logging.info(f"Watching {INCOMING_DIR} for new MP3s...")
     Path(INCOMING_DIR).mkdir(parents=True, exist_ok=True)
 
     observer = Observer()

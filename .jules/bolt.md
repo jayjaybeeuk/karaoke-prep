@@ -53,18 +53,26 @@
 **Learning:** Generating static videos (e.g., black backgrounds without subtitles) at high framerates (like 30fps) adds unnecessary encoding overhead, even when using `-tune stillimage`. Reducing the framerate to 1 fps for completely static videos results in a significant speedup (~1.75x) in FFmpeg processing time.
 **Action:** Dynamically adjust the video framerate in FFmpeg based on whether motion or updates (like subtitles) are present. For completely static outputs, lower the framerate (`-r 1`) to improve performance.
 
-## 2023-11-20 - Fast file content check using stat
-**Learning:** Checking if a file has content by reading it entirely into memory (e.g. `bool(Path.read_text().strip())`) is an O(n) operation bound by I/O and memory allocation, taking significant time for large files.
-**Action:** Use `Path.stat().st_size > 0` to check if a file has content. This just checks file metadata, which is O(1) and significantly faster, preventing unnecessary memory overhead.
+## 2025-02-18 - String replacement chaining vs splitlines+regex
+**Learning:** In Python, using `re.finditer` on an entire string avoids creating large intermediate lists and is more memory-efficient and faster than using `str.splitlines()` followed by line-by-line regex matching.
+**Action:** Always prefer `re.finditer` over `str.splitlines()` + `re.match()` when extracting information from large multiline strings.
 
-## 2023-11-20 - Regex finditer vs splitlines
-**Learning:** Using `str.splitlines()` followed by a loop and line-by-line regex `match()` creates a large intermediate list of strings, causing unnecessary memory overhead and latency.
-**Action:** Use `re.finditer(content)` directly on the entire string when parsing multi-line text to avoid intermediate list creation and improve speed.
+## 2025-02-18 - String join with unpacking vs concatenation
+**Learning:** In Python, assembling large strings by unpacking elements into a single list and using `join()` (e.g., `"\n".join([header, *events])`) is faster than concatenating string literals with the result of another `join()` (e.g. `header + "\n".join(events)`).
+**Action:** Use list unpacking within a single `join()` call for optimal string assembly performance instead of mixing `join()` with string concatenation.
 
-## 2023-11-20 - Python string concatenation vs list join unpacking
-**Learning:** Concatenating a large block of text (like file headers) with the result of a `"\n".join()` operation (`headers + "\n".join(events)`) is slower than joining a single unpacked list containing all elements.
-**Action:** Use list unpacking for faster string assembly when combining headers/footers with an array of events: `"\n".join([header, *events])`.
+## 2025-02-18 - String Formatting (f-string vs C-style)
+**Learning:** In Python, C-style `%` string formatting (e.g., `"%d:%02d:%05.2f" % (h, m, sec)`) can be faster than f-strings when dealing with specific float/int conversions by bypassing Python `int()` overhead.
+**Action:** Use C-style string formatting when converting numeric types in performance-critical sections (e.g., building subtitle timestamps).
 
-## 2023-11-20 - String formatting speed with type casting
-**Learning:** When string formatting involves explicit type casting (like `int(h)`), the old-style `%` formatting (`"%d:%02d:%05.2f" % (h, m, sec)`) can execute measurably faster than f-strings (`f"{int(h)}:{int(m):02d}:{sec:05.2f}"`) in tight loops.
-**Action:** For highly repetitive string formatting involving numerical casting (like generating subtitle timestamps), consider `%` formatting over f-strings for micro-optimization if it forms a bottleneck.
+## 2025-02-18 - Caching logic vs Original Filenames
+**Learning:** Tying cache retrieval strict logic to the original source file name (e.g. `mp3_path.stem`) inside a stable identifier cache directory defeats the purpose of the cache if the input source filename changes. If metadata matches but filename differs, the expensive process would re-run and save to a new subdirectory.
+**Action:** When searching for cached outputs that are saved in subdirectories tied to original source names, use wildcard matching (like `.glob()`) against the stable metadata-based directory to improve the cache hit rate and avoid redundant work.
+
+## 2023-11-20 - Redundant disk I/O and duplicate string allocation
+**Learning:** In pipelines, reading the same file twice (e.g., checking content length before processing, and then reading again inside a processing function) introduces redundant file system I/O overhead. Additionally, parsing strings into intermediate lists (like `timestamps` and `texts`) when generating subtitles uses unnecessary memory and requires multiple passes.
+**Action:** Use a `try/except FileNotFoundError` block to read the file once, capturing the content string. Pass this string directly to helper functions, and refactor text processing to construct output events in a single O(N) pass, avoiding intermediate list allocations.
+
+## 2025-02-18 - Caching formatted string calculations in continuous loops
+**Learning:** In continuous processing loops (e.g. converting a series of LRC timestamps into subtitle intervals where each line forms the start time and the next line's start forms the end time), calculating complex formatting functions (like `_seconds_to_ass`) on both the current and previous timestamps causes redundant work because the "current" timestamp becomes the "previous" timestamp in the next iteration.
+**Action:** When a calculation is needed on variables across consecutive loop iterations, cache the result of the calculation in a variable (e.g. `prev_ts_ass = ts_ass`) and reuse it in the next iteration instead of recalculating it.

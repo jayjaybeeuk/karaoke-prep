@@ -4,9 +4,10 @@ import tempfile
 import sys
 import os
 
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.append(os.path.join(os.path.dirname(__file__), "src"))
 import pipeline
 from pipeline import process_song
+
 
 def run_benchmark():
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -31,7 +32,7 @@ def run_benchmark():
         def mock_subprocess_run(args, **kwargs):
             time.sleep(2)  # Simulate expensive operation
             if "demucs" in args:
-                out_dir = Path(args[args.index("-o")+1])
+                out_dir = Path(args[args.index("-o") + 1])
                 out = out_dir / "htdemucs" / mp3_path.stem / "no_vocals.wav"
                 out.parent.mkdir(parents=True, exist_ok=True)
                 out.touch()
@@ -39,7 +40,7 @@ def run_benchmark():
         pipeline.subprocess.run = mock_subprocess_run
 
         def mock_generate_video(a, l, o):
-            time.sleep(1) # simulate video gen
+            time.sleep(1)  # simulate video gen
             o.touch()
 
         pipeline.generate_video = mock_generate_video
@@ -62,6 +63,7 @@ def run_benchmark():
                 print(f"Speedup: {duration1 / (duration2 or 0.0001):.1f}x")
         finally:
             pipeline.subprocess.run = original_subprocess_run
+
 
 if __name__ == "__main__":
     run_benchmark()
