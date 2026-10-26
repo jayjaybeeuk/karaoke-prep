@@ -35,9 +35,9 @@ class TestMetadata(unittest.TestCase):
         self.assertEqual(result["title"], "dummy_song")
         self.assertNotIn("album", result)
 
-    @patch("builtins.print")
+    @patch("metadata.logger.warning")
     @patch("metadata.EasyID3")
-    def test_extract_metadata_exception(self, mock_easyid3, mock_print):
+    def test_extract_metadata_exception(self, mock_easyid3, mock_logger_warning):
         mock_easyid3.side_effect = Exception("Read error")
 
         mp3_path = Path("dummy_song.mp3")
@@ -46,8 +46,8 @@ class TestMetadata(unittest.TestCase):
         self.assertEqual(result["artist"], "Unknown")
         self.assertEqual(result["title"], "dummy_song")
         self.assertNotIn("album", result)
-        mock_print.assert_called_once_with(
-            "[metadata] Could not read tags from dummy_song.mp3: Read error"
+        mock_logger_warning.assert_called_once_with(
+            "Could not read tags from dummy_song.mp3: Read error"
         )
 
 
