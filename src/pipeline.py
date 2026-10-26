@@ -18,6 +18,16 @@ LRC_PATTERN = re.compile(r"\[(\d+):(\d+\.\d+)\](.*)")
 # overhead during each function call.
 SANITIZE_PATTERN = re.compile(r"[^a-zA-Z0-9_\- ]")
 
+ASS_HEADER = (
+    "[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n\n"
+    "[V4+ Styles]\nFormat: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,"
+    "OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,"
+    "Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
+    "Style: Default,Arial,64,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,"
+    "-1,0,0,0,100,100,0,0,1,3,1,2,50,50,50,1\n\n"
+    "[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text"
+)
+
 
 def process_song(mp3_path: Path) -> Path:
     """Full pipeline: MP3 → karaoke video."""
@@ -242,18 +252,9 @@ def lrc_to_ass(content: str, ass_path: Path):
         end_ass = _seconds_to_ass(prev_ts + 5.0)
         events.append(f"Dialogue: 0,{prev_ts_ass},{end_ass},Default,,0,0,0,,{prev_text}")
 
-    ass_header = (
-        "[Script Info]\nScriptType: v4.00+\nPlayResX: 1920\nPlayResY: 1080\n\n"
-        "[V4+ Styles]\nFormat: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,"
-        "OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,"
-        "Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding\n"
-        "Style: Default,Arial,64,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,"
-        "-1,0,0,0,100,100,0,0,1,3,1,2,50,50,50,1\n\n"
-        "[Events]\nFormat: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text"
-    )
     # ⚡ Bolt Optimization: Unpack elements into a single list for join().
     # String concatenation with another string that's been joined is slower.
-    ass_content = "\n".join([ass_header, *events])
+    ass_content = "\n".join([ASS_HEADER, *events])
     ass_path.write_text(ass_content, encoding="utf-8")
 
 
