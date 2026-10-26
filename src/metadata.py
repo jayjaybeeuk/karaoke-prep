@@ -1,6 +1,7 @@
 """Extract metadata (artist, title, etc.) from MP3 files."""
 
 from pathlib import Path
+from mutagen import MutagenError
 from mutagen.easyid3 import EasyID3
 
 
@@ -20,7 +21,7 @@ def extract_metadata(mp3_path: Path) -> dict:
             meta["title"] = tags["title"][0]
         if "album" in tags:
             meta["album"] = tags["album"][0]
-    except Exception as e:
+    except (MutagenError, IOError) as e:
         print(f"[metadata] Could not read tags from {mp3_path.name}: {e}")
 
     return meta
