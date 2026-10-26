@@ -3,6 +3,7 @@ import sys
 import os
 from pathlib import Path
 from unittest.mock import patch
+from mutagen import MutagenError
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../src")))
 
@@ -38,7 +39,7 @@ class TestMetadata(unittest.TestCase):
     @patch("builtins.print")
     @patch("metadata.EasyID3")
     def test_extract_metadata_exception(self, mock_easyid3, mock_print):
-        mock_easyid3.side_effect = Exception("Read error")
+        mock_easyid3.side_effect = MutagenError("Read error")
 
         mp3_path = Path("dummy_song.mp3")
         result = extract_metadata(mp3_path)
