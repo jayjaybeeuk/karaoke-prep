@@ -147,20 +147,18 @@ def separate_vocals(mp3_path: Path, output_dir: Path) -> Path:
 
 def _escape_ffmpeg_path(path: str) -> str:
     """Escape file path for FFmpeg filtergraph syntax."""
-    # First level escaping (for the filter option value)
-    s = path.replace("\\", "\\\\").replace(":", "\\:").replace("'", "\\'")
-
-    # Second level escaping (for the filtergraph description)
-    # ⚡ Bolt Optimization: Use chained `.replace()` calls instead of compiled regex with re.sub()
-    # because it is measurably faster in Python for escaping multiple characters.
+    # ⚡ Bolt Optimization: Combine first and second level escaping into a single pass to avoid
+    # redundant string allocations and iterations. Use chained `.replace()` calls because
+    # it is measurably faster in Python for escaping multiple characters.
     return (
-        s.replace("\\", "\\\\")
+        path.replace("\\", "\\\\\\\\")
+        .replace(":", "\\\\:")
+        .replace("'", "\\\\\\'")
         .replace(",", "\\,")
         .replace(";", "\\;")
         .replace("[", "\\[")
         .replace("]", "\\]")
         .replace("=", "\\=")
-        .replace("'", "\\'")
     )
 
 
