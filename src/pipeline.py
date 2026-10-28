@@ -57,15 +57,6 @@ def process_song(mp3_path: Path) -> Path:
     # and CPU (vocal separation) operations concurrently, reducing overall pipeline latency.
     lrc_path = song_cache / "lyrics.lrc"
 
-    if STEM_ENGINE == "demucs":
-        # ⚡ Bolt Optimization: Use glob to check if ANY instrumental exists for this track's
-        # metadata, ignoring the original filename. This prevents re-running Demucs if renamed.
-        cached = next(song_cache.glob("htdemucs/*/no_vocals.wav"), None)
-        expected_instrumental = cached or song_cache / "htdemucs" / mp3_path.stem / "no_vocals.wav"
-    else:
-        cached = next(song_cache.glob("*/accompaniment.wav"), None)
-        expected_instrumental = cached or song_cache / mp3_path.stem / "accompaniment.wav"
-
     def fetch_lyrics_task():
         if lrc_path.exists():
             print(f"[pipeline] Using cached lyrics: {lrc_path}")
@@ -79,9 +70,23 @@ def process_song(mp3_path: Path) -> Path:
                 lrc_path.write_text("", encoding="utf-8")
 
     def separate_vocals_task():
-        if expected_instrumental.exists():
-            print(f"[pipeline] Using cached instrumental: {expected_instrumental}")
-            return expected_instrumental
+        # ⚡ Bolt Optimization: Delay cache hit resolution (glob) inside the background thread.
+        # This prevents the slow glob search from blocking the main thread while the lyrics fetch
+        # is being dispatched. If the exact cache path isn't found, fallback to glob.
+        if STEM_ENGINE == "demucs":
+            expected = song_cache / "htdemucs" / mp3_path.stem / "no_vocals.wav"
+            if not expected.exists():
+                cached = next(song_cache.glob("htdemucs/*/no_vocals.wav"), None)
+                expected = cached or expected
+        else:
+            expected = song_cache / mp3_path.stem / "accompaniment.wav"
+            if not expected.exists():
+                cached = next(song_cache.glob("*/accompaniment.wav"), None)
+                expected = cached or expected
+
+        if expected.exists():
+            print(f"[pipeline] Using cached instrumental: {expected}")
+            return expected
         else:
             return separate_vocals(mp3_path, song_cache)
 
