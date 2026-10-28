@@ -80,3 +80,7 @@
 ## 2025-02-18 - Single-pass multi-level string escaping
 **Learning:** When performing multi-level string escaping (e.g. for FFmpeg filtergraphs where some characters need `\\` and others need `\\\\`), applying them sequentially as separate passes creates intermediate string objects and iterates over the string multiple times unnecessarily.
 **Action:** Pre-calculate the final escaped string for characters that undergo multiple levels of escaping, and combine all replacements into a single chained `.replace()` pass. This avoids intermediate string allocations and significantly improves escaping performance (e.g., ~25% speedup).
+
+## 2026-10-28 - Deferring expensive file system operations
+**Learning:** Performing expensive file system operations (like `Path.glob()`) in the main thread blocks concurrent operations from starting. Furthermore, always preferring `glob` over a direct `exists()` check introduces unnecessary overhead on cache hits when the file path hasn't changed.
+**Action:** Delay cache hit resolution (e.g. `glob`) inside background threads so it runs concurrently with other I/O. Prioritize fast, direct `.exists()` checks before falling back to expensive wildcard searches.
