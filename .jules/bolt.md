@@ -84,3 +84,7 @@
 ## 2026-10-28 - Deferring expensive file system operations
 **Learning:** Performing expensive file system operations (like `Path.glob()`) in the main thread blocks concurrent operations from starting. Furthermore, always preferring `glob` over a direct `exists()` check introduces unnecessary overhead on cache hits when the file path hasn't changed.
 **Action:** Delay cache hit resolution (e.g. `glob`) inside background threads so it runs concurrently with other I/O. Prioritize fast, direct `.exists()` checks before falling back to expensive wildcard searches.
+
+## 2026-10-30 - Redundant Path.exists() after glob
+**Learning:** Checking `.exists()` on a file object immediately after it was yielded by `Path.glob()` (or when it was already checked for existence) introduces redundant, blocking I/O calls to the filesystem. This is particularly expensive in Dockerized environments with volume mounts.
+**Action:** When a file path is yielded by `.glob()` or has already passed an existence check, do not check its existence again. Trust the prior operation and return it directly.
