@@ -75,20 +75,30 @@ def process_song(mp3_path: Path) -> Path:
         # is being dispatched. If the exact cache path isn't found, fallback to glob.
         if STEM_ENGINE == "demucs":
             expected = song_cache / "htdemucs" / mp3_path.stem / "no_vocals.wav"
-            if not expected.exists():
-                cached = next(song_cache.glob("htdemucs/*/no_vocals.wav"), None)
-                expected = cached or expected
+            if expected.exists():
+                print(f"[pipeline] Using cached instrumental: {expected}")
+                return expected
+
+            cached = next(song_cache.glob("htdemucs/*/no_vocals.wav"), None)
+            if cached:
+                # ⚡ Bolt Optimization: Files yielded by Path.glob() inherently exist.
+                # Avoid calling .exists() on them again to prevent redundant, blocking I/O calls.
+                print(f"[pipeline] Using cached instrumental: {cached}")
+                return cached
         else:
             expected = song_cache / mp3_path.stem / "accompaniment.wav"
-            if not expected.exists():
-                cached = next(song_cache.glob("*/accompaniment.wav"), None)
-                expected = cached or expected
+            if expected.exists():
+                print(f"[pipeline] Using cached instrumental: {expected}")
+                return expected
 
-        if expected.exists():
-            print(f"[pipeline] Using cached instrumental: {expected}")
-            return expected
-        else:
-            return separate_vocals(mp3_path, song_cache)
+            cached = next(song_cache.glob("*/accompaniment.wav"), None)
+            if cached:
+                # ⚡ Bolt Optimization: Files yielded by Path.glob() inherently exist.
+                # Avoid calling .exists() on them again to prevent redundant, blocking I/O calls.
+                print(f"[pipeline] Using cached instrumental: {cached}")
+                return cached
+
+        return separate_vocals(mp3_path, song_cache)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
         future_lyrics = executor.submit(fetch_lyrics_task)
