@@ -245,11 +245,16 @@ def lrc_to_ass(content: str, ass_path: Path):
     for m in LRC_PATTERN.finditer(content):
         minutes, seconds, text = m.groups()
         text = text.strip()
-        ts = int(minutes) * 60 + float(seconds)
 
-        # ⚡ Bolt Optimization: Cache the formatted timestamp to avoid recalculating
-        # _seconds_to_ass for the same timestamp in the next iteration.
-        ts_ass = _seconds_to_ass(ts)
+        # ⚡ Bolt Optimization: Compute integer math directly on integer string components
+        # rather than converting to a total float (seconds) and back to hours/minutes/seconds.
+        # This avoids redundant floating-point conversions in tight loops.
+        min_int = int(minutes)
+        sec_float = float(seconds)
+        ts = min_int * 60 + sec_float
+
+        h, m_val = divmod(min_int, 60)
+        ts_ass = "%d:%02d:%05.2f" % (h, m_val, sec_float)
 
         if prev_ts_ass is not None and prev_text:
             events.append(f"Dialogue: 0,{prev_ts_ass},{ts_ass},Default,,0,0,0,,{prev_text}")
