@@ -88,3 +88,7 @@
 ## 2026-10-30 - Redundant Path.exists() after glob
 **Learning:** Checking `.exists()` on a file object immediately after it was yielded by `Path.glob()` (or when it was already checked for existence) introduces redundant, blocking I/O calls to the filesystem. This is particularly expensive in Dockerized environments with volume mounts.
 **Action:** When a file path is yielded by `.glob()` or has already passed an existence check, do not check its existence again. Trust the prior operation and return it directly.
+
+## 2026-10-31 - Redundant float conversions in timestamp parsing loops
+**Learning:** In tight loops that parse timestamp strings (like converting regex match groups for minutes and seconds), it is much faster to perform integer math directly on the string components rather than converting the entire value to a total float (seconds) and then reconverting it back into hours, minutes, and seconds using another function.
+**Action:** When calculating formatted timestamps from string representations of minutes/seconds in loops, compute the values directly using integer/float parsing on the specific groups to avoid the overhead of a full conversion to a float timestamp and back.
