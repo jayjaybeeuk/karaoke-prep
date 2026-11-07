@@ -92,3 +92,11 @@
 ## 2026-10-31 - Redundant float conversions in timestamp parsing loops
 **Learning:** In tight loops that parse timestamp strings (like converting regex match groups for minutes and seconds), it is much faster to perform integer math directly on the string components rather than converting the entire value to a total float (seconds) and then reconverting it back into hours, minutes, and seconds using another function.
 **Action:** When calculating formatted timestamps from string representations of minutes/seconds in loops, compute the values directly using integer/float parsing on the specific groups to avoid the overhead of a full conversion to a float timestamp and back.
+
+## 2024-11-01 - Fast-pathing divmod for tight loops
+**Learning:** Fast-pathing `divmod()` for common constraints (e.g., checking `if val < 60` before calculating `divmod(val, 60)`) avoids C/Python function call overhead in tight loops and measurably speeds up execution.
+**Action:** Always add a fast-path check before calling `divmod()` when the value is frequently below the divisor.
+
+## 2026-11-01 - Redundant float computations in loops
+**Learning:** Calculating total seconds floats (or other derived mathematical computations) on every iteration of a tight loop when the value is only used in a final step outside the loop is redundant and slows down execution.
+**Action:** Move calculations that are only needed for the final iteration out of the loop to save processing time.

@@ -238,9 +238,13 @@ def lrc_to_ass(content: str, ass_path: Path):
     # list allocations for timestamps and texts.
     events = []
 
-    prev_ts = None
     prev_ts_ass = None
     prev_text = None
+
+    # ⚡ Bolt Optimization: Initialize min_int and sec_float to 0 to capture the final values
+    # after the loop, avoiding redundant float calculations inside the loop.
+    min_int = 0
+    sec_float = 0.0
 
     for m in LRC_PATTERN.finditer(content):
         minutes, seconds, text = m.groups()
@@ -251,21 +255,27 @@ def lrc_to_ass(content: str, ass_path: Path):
         # This avoids redundant floating-point conversions in tight loops.
         min_int = int(minutes)
         sec_float = float(seconds)
-        ts = min_int * 60 + sec_float
 
-        h, m_val = divmod(min_int, 60)
+        # ⚡ Bolt Optimization: Fast-path divmod for common constraints (val < 60)
+        # to avoid C/Python function call overhead in tight loops.
+        if min_int < 60:
+            h, m_val = 0, min_int
+        else:
+            h, m_val = divmod(min_int, 60)
         ts_ass = "%d:%02d:%05.2f" % (h, m_val, sec_float)
 
         if prev_ts_ass is not None and prev_text:
             events.append(f"Dialogue: 0,{prev_ts_ass},{ts_ass},Default,,0,0,0,,{prev_text}")
 
-        prev_ts = ts
         prev_ts_ass = ts_ass
         prev_text = text
 
     # Add the final event
     if prev_ts_ass is not None and prev_text:
-        end_ass = _seconds_to_ass(prev_ts + 5.0)
+        # ⚡ Bolt Optimization: Calculate the total float seconds only once at the end
+        # since it's not needed during intermediate loop iterations.
+        final_ts = min_int * 60 + sec_float
+        end_ass = _seconds_to_ass(final_ts + 5.0)
         events.append(f"Dialogue: 0,{prev_ts_ass},{end_ass},Default,,0,0,0,,{prev_text}")
 
     # ⚡ Bolt Optimization: Unpack elements into a single list for join().
@@ -276,8 +286,17 @@ def lrc_to_ass(content: str, ass_path: Path):
 
 def _seconds_to_ass(s: float) -> str:
     # ⚡ Bolt Optimization: Use divmod for faster simultaneous quotient/remainder calculation.
-    m, sec = divmod(s, 60)
-    h, m = divmod(m, 60)
+    # ⚡ Bolt Optimization: Fast-path divmod for common constraints (val < 60)
+    # to avoid C/Python function call overhead in tight loops.
+    if s < 60:
+        m, sec = 0, s
+    else:
+        m, sec = divmod(s, 60)
+
+    if m < 60:
+        h, m = 0, m
+    else:
+        h, m = divmod(m, 60)
     # ⚡ Bolt Optimization: C-style % string formatting is faster than f-strings
     # for specific float/int conversions by bypassing Python int() overhead.
     return "%d:%02d:%05.2f" % (h, m, sec)
