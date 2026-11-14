@@ -92,3 +92,7 @@
 ## 2026-10-31 - Redundant float conversions in timestamp parsing loops
 **Learning:** In tight loops that parse timestamp strings (like converting regex match groups for minutes and seconds), it is much faster to perform integer math directly on the string components rather than converting the entire value to a total float (seconds) and then reconverting it back into hours, minutes, and seconds using another function.
 **Action:** When calculating formatted timestamps from string representations of minutes/seconds in loops, compute the values directly using integer/float parsing on the specific groups to avoid the overhead of a full conversion to a float timestamp and back.
+
+## 2026-11-09 - Avoid redundant math in loops
+**Learning:** Calculating values like floating-point timestamps inside a tight loop is wasteful if the value is only used once after the loop finishes.
+**Action:** Track the raw components (like minutes and seconds) during the loop and compute the final combined value only once after the loop completes.

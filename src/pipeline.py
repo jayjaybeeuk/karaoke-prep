@@ -81,7 +81,7 @@ def process_song(mp3_path: Path) -> Path:
 
             cached = next(song_cache.glob("htdemucs/*/no_vocals.wav"), None)
             if cached:
-                # ⚡ Bolt Optimization: File found via glob inherently exists. Avoid redundant .exists() checks.
+                # ⚡ Bolt Opt: File found via glob inherently exists. Avoid redundant checks.
                 print(f"[pipeline] Using cached instrumental: {cached}")
                 return cached
         else:
@@ -92,7 +92,7 @@ def process_song(mp3_path: Path) -> Path:
 
             cached = next(song_cache.glob("*/accompaniment.wav"), None)
             if cached:
-                # ⚡ Bolt Optimization: File found via glob inherently exists. Avoid redundant .exists() checks.
+                # ⚡ Bolt Opt: File found via glob inherently exists. Avoid redundant checks.
                 print(f"[pipeline] Using cached instrumental: {cached}")
                 return cached
 
@@ -238,9 +238,10 @@ def lrc_to_ass(content: str, ass_path: Path):
     # list allocations for timestamps and texts.
     events = []
 
-    prev_ts = None
     prev_ts_ass = None
     prev_text = None
+    last_min_int = 0
+    last_sec_float = 0.0
 
     for m in LRC_PATTERN.finditer(content):
         minutes, seconds, text = m.groups()
@@ -251,7 +252,6 @@ def lrc_to_ass(content: str, ass_path: Path):
         # This avoids redundant floating-point conversions in tight loops.
         min_int = int(minutes)
         sec_float = float(seconds)
-        ts = min_int * 60 + sec_float
 
         h, m_val = divmod(min_int, 60)
         ts_ass = "%d:%02d:%05.2f" % (h, m_val, sec_float)
@@ -259,13 +259,17 @@ def lrc_to_ass(content: str, ass_path: Path):
         if prev_ts_ass is not None and prev_text:
             events.append(f"Dialogue: 0,{prev_ts_ass},{ts_ass},Default,,0,0,0,,{prev_text}")
 
-        prev_ts = ts
         prev_ts_ass = ts_ass
         prev_text = text
+        last_min_int = min_int
+        last_sec_float = sec_float
 
     # Add the final event
     if prev_ts_ass is not None and prev_text:
-        end_ass = _seconds_to_ass(prev_ts + 5.0)
+        # ⚡ Bolt Optimization: Calculate the total float timestamp only once at the end
+        # instead of on every iteration since it's only needed for the final event.
+        last_ts = last_min_int * 60 + last_sec_float
+        end_ass = _seconds_to_ass(last_ts + 5.0)
         events.append(f"Dialogue: 0,{prev_ts_ass},{end_ass},Default,,0,0,0,,{prev_text}")
 
     # ⚡ Bolt Optimization: Unpack elements into a single list for join().
